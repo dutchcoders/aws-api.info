@@ -132,7 +132,7 @@ class Row extends React.Component {
                 <td>{ doc.ExportedName }</td>
                 <td>{ doc.HTTP.Method }</td>
                 <td>{ doc.HTTP.RequestURI }</td>
-                <td dangerouslySetInnerHTML={ doc.Documentation }></td>
+                <td dangerouslySetInnerHTML={ { __html: doc.Documentation }}></td>
                 <td>{ doc.input.shape }</td>
                 <td>{ doc.output.shape }</td>
                 </tr>;
