@@ -5,6 +5,7 @@ import _ from 'lodash';
 import { browserHistory, Router, Route, Link } from 'react-router'
 import 'whatwg-fetch';
 import Select from 'react-select';
+import lunr from 'lunr';
 
 var versions = [
 { value: 'acm.2015-12-08.json', version: '2015-12-08', service: 'acm', label: 'acm/2015-12-08'},
@@ -79,43 +80,71 @@ var versions = [
 { value: 'workspaces.2015-04-08.json', version: '2015-04-08', service: 'workspaces', label: 'workspaces/2015-04-08'},
 ];
 
-class Part extends React.Component {
-    constructor(props){
-        super(props);
-    }
-    render() {
-        const { name, part } = this.props;
-        return <div className="part"><b>{ name }</b>: {part.description}</div>
-    }
+var idx = lunr(function () {
+    this.field('title', { boost: 10 })
+    this.field('body')
+});
+
+var doc = {
+    "title": "Twelfth-Night",
+    "body": "If music be the food of love, play on: Give me excess of it…",
+    "author": "William Shakespeare",
+    "id": 1
 }
 
-class Param extends React.Component {
+idx.add(doc);
+
+idx.search("love");
+
+
+class Shape extends React.Component {
     constructor(props){
         super(props);
     }
     render() {
-        const { name, param } = this.props;
+        const shape = this.props.docs.Shapes[this.props.shape.shape];
 
-        var options = null;
-        if (param.options) {
-            options = <span>[ {param.options.join(', ', param.options) } ]</span>;
+        if (_.isUndefined(shape)) {
+            return <li>{ this.props.shape.shape } </li>;
+        }
+        // check for required
+        console.debug(this.props.shape);
+        console.debug(shape);
+
+        var enums = null;
+        if (shape.Enum) {
+            enums = <span className="enums">Enums [ {shape.Enum.join(', ') } ]</span>;
         }
 
-        var default_ = null;
-        if (param.default) {
-            default_  = <span>( default: { param.default ? 'true':'false' } )</span>;
+        var deprecated = null;
+        if (this.props.shape.deprecated) {
+                deprecated = <span>Deprecated { this.props.shape.deprecated }</span>;
         }
 
-        if (param.defaut_value) {
-            default_  = <span>( default: { param.defaut_value } )</span>;
+        var streaming = null;
+        if (this.props.shape.streaming) {
+                streaming = <span>Streaming { this.props.shape.streaming }</span>;
         }
 
-        return <div className="param"><b>{ name } (<span>{ param.type }</span>)</b>: {param.description}
-                <br/>
-                <span>{ param.required }</span>
-                { options }
-                { default_ }
-            </div>;
+        var location = null;
+        if (this.props.shape.Location) {
+            location = <span className="location"><span className="name">{ this.props.shape.LocationName }</span> <span className="type">({ shape.Type })</span> in { this.props.shape.Location }</span>;
+        }
+
+        return <div>
+                <span className="name">{ this.props.shape.shape }&nbsp;</span>
+                <span>{location} </span>
+                <span className="documentation" dangerouslySetInnerHTML={ { __html: this.props.shape.Documentation }}></span>
+                { deprecated }
+                { streaming }
+                { enums }
+                <ul>
+                { _.map(shape.members, (shape, key) =>
+                        <li className="shape"><Shape docs={this.props.docs} operation={this.props.operation} shape={ shape }/></li>
+                   )
+                }
+                </ul>
+        </div>;
     }
 }
 
@@ -124,59 +153,42 @@ class Row extends React.Component {
         super(props);
     }
     render() {
-        const doc = this.props.doc;
+        const operation = this.props.operation;
 
-        console.debug(doc);
+        console.debug(operation);
 
         return <tr className="instance">
-                <td>{ doc.ExportedName }</td>
-                <td>{ doc.HTTP.Method }</td>
-                <td>{ doc.HTTP.RequestURI }</td>
-                <td dangerouslySetInnerHTML={ { __html: doc.Documentation }}></td>
-                <td>{ doc.input.shape }</td>
-                <td>{ doc.output.shape }</td>
+                <td><b>{ operation.ExportedName }</b>&nbsp;
+                <span dangerouslySetInnerHTML={ { __html: operation.Documentation }}></span>
+                </td>
+                <td>{ operation.HTTP.RequestURI }</td>
+                <td>{ operation.HTTP.Method }</td>
+                <td className="shape"><Shape docs={this.props.docs} operation={operation} shape={operation.input}/></td>
+                <td className="shape"><Shape docs={this.props.docs} operation={operation} shape={operation.output}/></td>
                 </tr>;
-
-        var params = [];
-        _.forEach(doc.url.params, (v, k) => {
-           params.push(<Param name={k} param={v}></Param>);
-        });
-
-        var parts = [];
-        _.forEach(doc.url.parts, (v, k) => {
-           parts.push(<Part name={k} part={v}></Part>);
-        });
-
-        return <tr key={doc.name} className="instance">
-                <td>{ doc.name }</td>
-                <td>{ (() => {
-                    return doc.methods.join(', ')
-                })()}
-                </td>
-                <td>
-                    { _.map(doc.url.paths, function(path) {
-                                                              return <span className="path">{ path }</span>;
-                                                          })
-                    }
-                </td>
-                <td>{ parts }</td>
-                <td>
-                    {(() => {
-                                if (doc["body"] != null) {
-                                    return doc["body"]["description"];
-                                }
-                            })()}
-                </td>
-                <td>{ params }</td>
-                <td>
-                    <a href={ doc.documentation }>
-                    [link]
-                    </a>
-                </td>
-            </tr>
     }
 }
 
+class Operations extends React.Component {
+    constructor(props){
+        super(props);
+    }
+    render() {
+        const operations = this.props.operations;
+        const docs = this.props.docs;
+
+        if (operations.length == 0) {
+            return <tbody>No results found.</tbody>;
+        }
+
+        return <tbody>
+                { _.map(operations, (operation, key) =>
+                        <Row key={key} docs={docs} operation={operation} />
+                       )
+                }
+                </tbody>;
+    }
+}
 
 class RootView extends React.Component {
     constructor(props){
@@ -233,11 +245,16 @@ class RootView extends React.Component {
         this.setState({q: q});
     }
     render() {
+        const docs = this.state.docs;
         const q = this.props.location.query.q;
 
-        console.debug(this.state.docs);
+        console.debug(docs);
 
-        var docs = _.filter(this.state.docs.Operations, function(doc) {
+        if (_.isUndefined(docs.Metadata)) {
+            return <div>Loading..</div>;
+        }
+
+        var operations = _.filter(docs.Operations, function(doc) {
             var re = new RegExp(q, 'gi');
             return doc.ExportedName.match(re) || doc.Documentation.match(re);
         });
@@ -264,24 +281,27 @@ class RootView extends React.Component {
                 </form>
                 </div>
                 <div className="row">
+                    <p>Version: {docs.Metadata.APIVersion}</p>
+                   <p>Endpoint: {docs.Metadata.EndpointPrefix}</p>
+                   <p>JSONVersion: {docs.Metadata.JSONVersion}</p>
+                   <p>Protocol: {docs.Metadata.Protocol}</p>
+                   <p>Abbreviation: {docs.Metadata.ServiceAbbreviation}</p>
+                   <p>FullName: {docs.Metadata.ServiceFullName}</p>
+                   <p>Signature: {docs.Metadata.SignatureVersion}</p>
+                </div>
+                <div className="row">
                 <div className="table-responsive">
                 <table className="table table-bordered table-hover table-condensed table-striped">
                     <thead>
                         <tr>
                             <th>Name</th>
-                            <th>Method</th>
                             <th>URI</th>
-                            <th>Description</th>
+                            <th>Method</th>
                             <th>Input</th>
                             <th>Output</th>
                         </tr>
                     </thead>
-                    <tbody>
-                      { _.map(docs, (doc, key) =>
-                        <Row key={key} doc={doc} />
-                      )
-                    }
-                    </tbody>
+                    <Operations operations={operations} docs={docs} />
                 </table>
             </div>
             </div>

@@ -538,3 +538,22 @@ form .form-control {
 .Select-clear-zone {
     display: none;
 }
+
+.shape .name {
+    font-weight: bold;
+}
+
+.shape .documentation {
+    display: block;
+}
+
+.shape .type {
+}
+
+.shape .location {
+    display: block;
+}
+
+.shape .enums {
+    display: block;
+}
