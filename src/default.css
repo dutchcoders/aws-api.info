@@ -558,3 +558,7 @@ form .form-control {
 .shape .enums {
     display: block;
 }
+
+.label {
+    margin-bottom: 0;
+}
