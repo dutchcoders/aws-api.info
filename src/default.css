@@ -543,8 +543,9 @@ form .form-control {
     font-weight: bold;
 }
 
-.shape .documentation {
+.shape .description {
     display: block;
+    font-size: 0.9em;
 }
 
 .shape .type {

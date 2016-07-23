@@ -2,10 +2,11 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import {Table, Column, Cell} from 'fixed-data-table';
 import _ from 'lodash';
-import { browserHistory, Router, Route, Link } from 'react-router'
+import { browserHistory, Router, Route, Link } from 'react-router';
 import 'whatwg-fetch';
 import Select from 'react-select';
 import lunr from 'lunr';
+var ReactTooltip = require("react-tooltip");
 
 var versions = [
 { value: 'acm.2015-12-08.json', version: '2015-12-08', service: 'acm', label: 'acm/2015-12-08'},
@@ -81,8 +82,8 @@ var versions = [
 ];
 
 var idx = lunr(function () {
-    this.field('title', { boost: 10 })
-    this.field('body')
+    this.field('title', { boost: 10 });
+    this.field('body');
 });
 
 var doc = {
@@ -90,7 +91,7 @@ var doc = {
     "body": "If music be the food of love, play on: Give me excess of it…",
     "author": "William Shakespeare",
     "id": 1
-}
+};
 
 idx.add(doc);
 
@@ -102,69 +103,153 @@ class Shape extends React.Component {
         super(props);
     }
     render() {
-        const shape = this.props.docs.Shapes[this.props.shape.shape];
+        // we've got a ref and shape, ref contains locationname, shape the shape itself.
+        const shape = this.props.shape; //this.props.docs.shapes[this.props.shape.shape];
 
-        if (_.isUndefined(shape)) {
-            return <li>{ this.props.shape.shape } </li>;
+        const ref = this.props.reftest;
+        const docs = this.props.docs;
+        const api = this.props.api;
+
+        if (shape.flattened) {
+            return <Shape docs={docs} api={api} operation={this.props.operation} reftest={ ref } shape={ api.shapes[shape.member.shape ] }/>;
         }
-        // check for required
-        console.debug(this.props.shape);
-        console.debug(shape);
+
+        var required = null;
+        if (shape.min>=1) {
+            required = <span className="location">required</span>;
+        }
+
+        var xmlNamespace = null;
+        if (ref.xmlNamespace) {
+            xmlNamespace = <span className="xml"><label>Xml namespace</label> {ref.xmlNamespace.uri}</span>;
+        }
+
+        var description = null;
+        if (docs.shapes[ref.shape].base) {
+            description = <span className="description" dangerouslySetInnerHTML={ { __html: docs.shapes[ref.shape].base } } />;
+        }
 
         var enums = null;
-        if (shape.Enum) {
-            enums = <span className="enums">Enums [ {shape.Enum.join(', ') } ]</span>;
+        if (shape.enum) {
+            enums = <span className="enum"><label>Enum</label> [ {shape.enum.join(', ') } ]</span>;
         }
 
-        var deprecated = null;
-        if (this.props.shape.deprecated) {
-                deprecated = <span>Deprecated { this.props.shape.deprecated }</span>;
-        }
-
-        var streaming = null;
-        if (this.props.shape.streaming) {
-                streaming = <span>Streaming { this.props.shape.streaming }</span>;
-        }
-
-        var location = null;
-        if (this.props.shape.Location) {
-            location = <span className="location"><span className="name">{ this.props.shape.LocationName }</span> <span className="type">({ shape.Type })</span> in { this.props.shape.Location }</span>;
-        }
-
-        return <div>
-                <span className="name">{ this.props.shape.shape }&nbsp;</span>
-                <span>{location} </span>
-                <span className="documentation" dangerouslySetInnerHTML={ { __html: this.props.shape.Documentation }}></span>
-                { deprecated }
-                { streaming }
-                { enums }
+        if (shape.type === "structure") {
+        return <div className="shape">
+                <span className="location"><span data-for='getContent'>{ref.shape}</span></span>
+                {description}
+                {enums}
+                {required}
+                {xmlNamespace}
                 <ul>
-                { _.map(shape.members, (shape, key) =>
-                        <li className="shape"><Shape docs={this.props.docs} operation={this.props.operation} shape={ shape }/></li>
+                { _.map(shape.members, (member, key) =>
+                        <li className="shape"><Shape api={api} docs={docs} operation={this.props.operation} reftest={member} shape={ docs.shapes[member.shape] }/></li>
                    )
                 }
                 </ul>
-        </div>;
+                </div>;
+        } else {
+            var location = null;
+            if (ref.locationName) {
+                location = <span><span>{ref.shape}</span> ({ ref.locationName }): { shape.type }</span>;
+            } else {
+                location = <span><span>{ref.shape}</span>: { shape.type }</span>;
+            };
+
+            return <div className="shape">
+                    <span className="location">{ location }</span>
+                    {description}
+                    {enums}
+                    {required}
+                    {xmlNamespace}
+                    </div>;
+        };
+
+        // check for required
     }
 }
 
-class Row extends React.Component {
+class Group extends React.Component {
+    constructor(props){
+        super(props);
+    }
+    render() {
+        const label = this.props.label;
+        const group = this.props.group;
+        const docs = this.props.docs;
+        const api = this.props.api;
+
+        if (_.isUndefined(group)) {
+            return null;
+        }
+
+        return <span>
+                    <b>{ label }</b>
+                    <ul>
+                    { _.map(group, (member, key) =>
+                        <li className="shape"><Shape api={api} docs={docs} operation={this.props.operation} reftest={member} shape={ api.shapes[member.shape] }/></li>
+                    )
+                    }
+                    </ul>
+            </span>;
+    }
+}
+class Operation extends React.Component {
     constructor(props){
         super(props);
     }
     render() {
         const operation = this.props.operation;
+        const api = this.props.api;
+        const docs = this.props.docs;
 
-        console.debug(operation);
+        var input = null;
+        if (operation.input) {
+            var shape = api.shapes[operation.input.shape];
+            var grouped = _.groupBy(shape.members, function(b) { return b.location });
+            input = <div>
+                    <span className="location">{ operation.input.shape }</span>
+                    <br/>
+                    <Group label="Header" group={grouped.header } api={api} docs={docs} operation={this.props.operation} />
+                    <Group label="Uri" group={grouped.uri } api={api} docs={docs} operation={this.props.operation} />
+                    <Group label="Querystring" group={grouped.querystring } api={api} docs={docs} operation={this.props.operation} />
+                    <Group label="Body" group={grouped.undefined } api={api} docs={docs} operation={this.props.operation} />
+                </div>;
+
+        }
+
+        var output = null;
+        if (operation.output) {
+            var shape = api.shapes[operation.output.shape];
+            var grouped = _.groupBy(shape.members, function(b) { return b.location });
+            output = <div>
+                    <Group label="Header" group={grouped.header } api={api} docs={docs} operation={this.props.operation} />
+                    <Group label="Uri" group={grouped.uri } api={api} docs={docs} operation={this.props.operation} />
+                    <Group label="Querystring" group={grouped.querystring } api={api} docs={docs} operation={this.props.operation} />
+                    <Group label="Body" group={grouped.undefined } api={api} docs={docs} operation={this.props.operation} />
+                </div>;
+
+        }
+
 
         return <tr className="instance">
-                <td><b>{ operation.ExportedName }</b>&nbsp;
-                <span dangerouslySetInnerHTML={ { __html: operation.Documentation }}></span>
+                <td>
+                <a href={ operation.documentationUrl } target="_new">
+                    <b>{ operation.name }</b>
+                </a>
+                <br/>
+                <span dangerouslySetInnerHTML={ { __html: docs.operations[operation.name] } } />
                 </td>
-                <td>{ operation.HTTP.RequestURI }</td>
-                <td>{ operation.HTTP.Method }</td>
-                <td className="shape"><Shape docs={this.props.docs} operation={operation} shape={operation.input}/></td>
-                <td className="shape"><Shape docs={this.props.docs} operation={operation} shape={operation.output}/></td>
+                <td>{ operation.http.requestUri }</td>
+                <td>{ operation.http.method }</td>
+                <td className="shape">{input}</td>
+                <td className="shape">{output}</td>
+                <td className="shape">
+                { _.map(operation.errors, (error, key) =>
+                        <Shape api={api} docs={docs} operation={operation} reftest={error} shape={api.shapes[error.shape]} />
+                       )
+                }
+                </td>
                 </tr>;
     }
 }
@@ -176,6 +261,7 @@ class Operations extends React.Component {
     render() {
         const operations = this.props.operations;
         const docs = this.props.docs;
+        const api = this.props.api;
 
         if (operations.length == 0) {
             return <tbody>No results found.</tbody>;
@@ -183,7 +269,7 @@ class Operations extends React.Component {
 
         return <tbody>
                 { _.map(operations, (operation, key) =>
-                        <Row key={key} docs={docs} operation={operation} />
+                        <Operation key={key} api={api} docs={docs} operation={operation} />
                        )
                 }
                 </tbody>;
@@ -194,7 +280,7 @@ class RootView extends React.Component {
     constructor(props){
         super(props);
 
-        this.state = { docs:[], error: null, path: (this.props.location.pathname || ''), q: (this.props.location.query.q || '') };
+        this.state = { api: null, docs:null, error: null, path: (this.props.location.pathname || ''), q: (this.props.location.query.q || '') };
 
     }
     componentDidMount() {
@@ -206,7 +292,17 @@ class RootView extends React.Component {
     }
     load(service, version) {
         var $this = this;
-        fetch("/docs/" + service + "." + version + ".json").then(function(response) {
+        fetch("/apis/" + service + "/" + version + "/api-2.json").then(function(response) {
+            if (response.status !== 200) {
+                $this.setState({error: { code: response.status }});
+                return;
+            }
+
+            response.json().then(function(data) {
+                $this.setState({api: data});
+            });
+        });
+        fetch("/apis/" + service + "/" + version + "/docs-2.json").then(function(response) {
             if (response.status !== 200) {
                 $this.setState({error: { code: response.status }});
                 return;
@@ -246,19 +342,21 @@ class RootView extends React.Component {
     }
     render() {
         const docs = this.state.docs;
+        const api = this.state.api;
         const q = this.props.location.query.q;
 
-        console.debug(docs);
-
-        if (_.isUndefined(docs.Metadata)) {
+        if (!api) {
             return <div>Loading..</div>;
         }
 
-        var operations = _.filter(docs.Operations, function(doc) {
-            var re = new RegExp(q, 'gi');
-            return doc.ExportedName.match(re) || doc.Documentation.match(re);
-        });
+        if (!docs) {
+            return <div>Loading..</div>;
+        }
 
+        var operations = _.filter(api.operations, function(doc, key) {
+            var re = new RegExp(q, 'gi');
+            return doc.name.match(re) || docs.operations[doc.name].match(re);
+        });
 
         if (this.state.error != null) {
             return <div>{this.state.error.code}</div>
@@ -280,15 +378,22 @@ class RootView extends React.Component {
                     </div>
                 </form>
                 </div>
+                { /*
                 <div className="row">
-                    <p>Version: {docs.Metadata.APIVersion}</p>
-                   <p>Endpoint: {docs.Metadata.EndpointPrefix}</p>
-                   <p>JSONVersion: {docs.Metadata.JSONVersion}</p>
-                   <p>Protocol: {docs.Metadata.Protocol}</p>
-                   <p>Abbreviation: {docs.Metadata.ServiceAbbreviation}</p>
-                   <p>FullName: {docs.Metadata.ServiceFullName}</p>
-                   <p>Signature: {docs.Metadata.SignatureVersion}</p>
+                    <div className="input-group col-lg-offset-10 col-lg-2">
+                    <p>Version: {api.version}</p>
+                    <p>API Version: {api.metadata.apiVersion}</p>
+                    <p>Checksum format: {api.metadata.checksumFormat}</p>
+                   <p>Endpoint: {api.metadata.endpointPrefix}</p>
+                   <p>JSONVersion: {api.metadata.jsonVersion}</p>
+                   <p>Protocol: {api.metadata.protocol}</p>
+                   <p>Abbreviation: {api.metadata.serviceAbbreviation}</p>
+                   <p>FullName: {api.metadata.serviceFullName}</p>
+                   <p>GlobalEndpoint: {api.metadata.globalEndpoint}</p>
+                   <p>Signature: {api.metadata.signatureVersion}</p>
+                   </div>
                 </div>
+                */ }
                 <div className="row">
                 <div className="table-responsive">
                 <table className="table table-bordered table-hover table-condensed table-striped">
@@ -299,9 +404,10 @@ class RootView extends React.Component {
                             <th>Method</th>
                             <th>Input</th>
                             <th>Output</th>
+                            <th>Errors</th>
                         </tr>
                     </thead>
-                    <Operations operations={operations} docs={docs} />
+                    <Operations operations={operations} docs={docs} api={api} />
                 </table>
             </div>
             </div>
