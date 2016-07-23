@@ -121,7 +121,7 @@ class Shape extends React.Component {
 
         var xmlNamespace = null;
         if (ref.xmlNamespace) {
-            xmlNamespace = <span className="xml"><label>Xml namespace</label> {ref.xmlNamespace.uri}</span>;
+            xmlNamespace = <span className="xml"><b>Xml namespace</b> {ref.xmlNamespace.uri}</span>;
         }
 
         var description = null;
@@ -131,7 +131,7 @@ class Shape extends React.Component {
 
         var enums = null;
         if (shape.enum) {
-            enums = <span className="enum"><label>Enum</label> [ {shape.enum.join(', ') } ]</span>;
+            enums = <span className="enum"><b>Enum</b> [ {shape.enum.join(', ') } ]</span>;
         }
 
         if (shape.type === "structure") {
@@ -238,10 +238,12 @@ class Operation extends React.Component {
                     <b>{ operation.name }</b>
                 </a>
                 <br/>
-                <span dangerouslySetInnerHTML={ { __html: docs.operations[operation.name] } } />
+                <span><b>Url:</b> { operation.http.requestUri }</span>
+                <br/>
+                <span><b>Method:</b> { operation.http.method }</span>
+                <br/>
+                <span><b>Description:</b><span dangerouslySetInnerHTML={ { __html: docs.operations[operation.name] } } /></span>
                 </td>
-                <td>{ operation.http.requestUri }</td>
-                <td>{ operation.http.method }</td>
                 <td className="shape">{input}</td>
                 <td className="shape">{output}</td>
                 <td className="shape">
@@ -400,8 +402,6 @@ class RootView extends React.Component {
                     <thead>
                         <tr>
                             <th>Name</th>
-                            <th>URI</th>
-                            <th>Method</th>
                             <th>Input</th>
                             <th>Output</th>
                             <th>Errors</th>
