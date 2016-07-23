@@ -105,12 +105,15 @@ class Shape extends React.Component {
     render() {
         // we've got a ref and shape, ref contains locationname, shape the shape itself.
         const shape = this.props.shape; //this.props.docs.shapes[this.props.shape.shape];
+        if (_.isUndefined(shape)) {
+            return <span>{this.props.reftest.shape}</span>;
+        }
 
         const ref = this.props.reftest;
         const docs = this.props.docs;
         const api = this.props.api;
 
-        if (shape.flattened) {
+        if (shape.member && shape.flattened) {
             return <Shape docs={docs} api={api} operation={this.props.operation} reftest={ ref } shape={ api.shapes[shape.member.shape ] }/>;
         }
 
@@ -125,7 +128,7 @@ class Shape extends React.Component {
         }
 
         var description = null;
-        if (docs.shapes[ref.shape].base) {
+        if (docs.shapes[ref.shape] && docs.shapes[ref.shape].base) {
             description = <span className="description" dangerouslySetInnerHTML={ { __html: docs.shapes[ref.shape].base } } />;
         }
 
@@ -294,6 +297,8 @@ class RootView extends React.Component {
     }
     load(service, version) {
         var $this = this;
+        $this.setState({api: null, doc: null});
+
         fetch("/apis/" + service + "/" + version + "/api-2.json").then(function(response) {
             if (response.status !== 200) {
                 $this.setState({error: { code: response.status }});
