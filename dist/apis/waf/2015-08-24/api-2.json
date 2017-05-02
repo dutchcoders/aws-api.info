@@ -8,7 +8,8 @@
     "serviceAbbreviation":"WAF",
     "serviceFullName":"AWS WAF",
     "signatureVersion":"v4",
-    "targetPrefix":"AWSWAF_20150824"
+    "targetPrefix":"AWSWAF_20150824",
+    "uid":"waf-2015-08-24"
   },
   "operations":{
     "CreateByteMatchSet":{
@@ -701,7 +702,10 @@
         "DELETE"
       ]
     },
-    "ChangeToken":{"type":"string"},
+    "ChangeToken":{
+      "type":"string",
+      "min":1
+    },
     "ChangeTokenStatus":{
       "type":"string",
       "enum":[
@@ -1044,6 +1048,11 @@
         "Rule":{"shape":"Rule"}
       }
     },
+    "GetSampledRequestsMaxItems":{
+      "type":"long",
+      "max":500,
+      "min":1
+    },
     "GetSampledRequestsRequest":{
       "type":"structure",
       "required":[
@@ -1056,7 +1065,7 @@
         "WebAclId":{"shape":"ResourceId"},
         "RuleId":{"shape":"ResourceId"},
         "TimeWindow":{"shape":"TimeWindow"},
-        "MaxItems":{"shape":"ListMaxItems"}
+        "MaxItems":{"shape":"GetSampledRequestsMaxItems"}
       }
     },
     "GetSampledRequestsResponse":{
@@ -1170,7 +1179,10 @@
     },
     "IPSetDescriptorType":{
       "type":"string",
-      "enum":["IPV4"]
+      "enum":[
+        "IPV4",
+        "IPV6"
+      ]
     },
     "IPSetDescriptorValue":{"type":"string"},
     "IPSetDescriptors":{
@@ -1210,7 +1222,6 @@
     "IPString":{"type":"string"},
     "ListByteMatchSetsRequest":{
       "type":"structure",
-      "required":["Limit"],
       "members":{
         "NextMarker":{"shape":"NextMarker"},
         "Limit":{"shape":"PaginationLimit"}
@@ -1225,7 +1236,6 @@
     },
     "ListIPSetsRequest":{
       "type":"structure",
-      "required":["Limit"],
       "members":{
         "NextMarker":{"shape":"NextMarker"},
         "Limit":{"shape":"PaginationLimit"}
@@ -1238,14 +1248,8 @@
         "IPSets":{"shape":"IPSetSummaries"}
       }
     },
-    "ListMaxItems":{
-      "type":"long",
-      "max":100,
-      "min":1
-    },
     "ListRulesRequest":{
       "type":"structure",
-      "required":["Limit"],
       "members":{
         "NextMarker":{"shape":"NextMarker"},
         "Limit":{"shape":"PaginationLimit"}
@@ -1260,7 +1264,6 @@
     },
     "ListSizeConstraintSetsRequest":{
       "type":"structure",
-      "required":["Limit"],
       "members":{
         "NextMarker":{"shape":"NextMarker"},
         "Limit":{"shape":"PaginationLimit"}
@@ -1275,7 +1278,6 @@
     },
     "ListSqlInjectionMatchSetsRequest":{
       "type":"structure",
-      "required":["Limit"],
       "members":{
         "NextMarker":{"shape":"NextMarker"},
         "Limit":{"shape":"PaginationLimit"}
@@ -1290,7 +1292,6 @@
     },
     "ListWebACLsRequest":{
       "type":"structure",
-      "required":["Limit"],
       "members":{
         "NextMarker":{"shape":"NextMarker"},
         "Limit":{"shape":"PaginationLimit"}
@@ -1305,7 +1306,6 @@
     },
     "ListXssMatchSetsRequest":{
       "type":"structure",
-      "required":["Limit"],
       "members":{
         "NextMarker":{"shape":"NextMarker"},
         "Limit":{"shape":"PaginationLimit"}
@@ -1338,7 +1338,7 @@
     "PaginationLimit":{
       "type":"integer",
       "max":100,
-      "min":1
+      "min":0
     },
     "ParameterExceptionField":{
       "type":"string",
